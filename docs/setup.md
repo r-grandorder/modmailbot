@@ -13,7 +13,7 @@ To keep it online, you need to keep the bot process running.
 
 ## Prerequisites
 1. Create a bot on the [Discord Developer Portal](https://discord.com/developers/)
-2. Turn on **Server Members Intent** and **Message Content Intent** in the bot's settings page on the developer portal ([Image](intents.png))
+2. This build runs **without any privileged intents**, so you do **not** need to enable Message Content Intent or Server Members Intent on the developer portal. (Turning the greeting or join/leave notification features back on would require Server Members again.)
 3. Install Node.js 24 (LTS) or higher
 4. [Download the latest bot release here](https://github.com/Dragory/modmailbot/releases/latest) (click on "Source code (zip)")
 5. Extract the downloaded Zip file to a new folder
@@ -26,7 +26,7 @@ This is the recommended setup for small and medium sized servers.
 
 1. **Go through the [prerequisites](#prerequisites) above first!**
 2. Open `config.ini` in a text editor and fill in the required values. `mainServerId` and `inboxServerId` should both be set to your server's id.
-3. Invite the bot to the server
+3. Invite the bot to the server, using an OAuth2 invite link that includes both the `bot` and `applications.commands` scopes (the latter is required for the slash commands to show up)
 4. On a new line at the end of `config.ini`, add `categoryAutomation.newThread = CATEGORY_ID_HERE`
     * Replace `CATEGORY_ID_HERE` with the ID of the category where new modmail threads should go
 5. Make sure the bot has `Manage Channels`, `Manage Messages`, and `Attach Files` permissions in the category
@@ -46,7 +46,7 @@ You might also want this setup for privacy concerns*.
 3. Open `config.ini` in a text editor and fill in the required values
     * Set `mainServerId` to the ID of the *main* server where users will message the bot from
     * Set `inboxServerId` to the ID of the *inbox* server created in step 2
-4. Invite the bot to both the main server and the newly-created inbox server
+4. Invite the bot to both the main server and the newly-created inbox server, using an OAuth2 invite link that includes both the `bot` and `applications.commands` scopes (the latter is required for the slash commands to show up)
 5. Open `config.ini` in a text editor and fill in the values
 6. Make sure the bot has the `Manage Channels`, `Manage Messages`, and `Attach Files` permissions on the **inbox** server
     * The bot does not need any permissions on the main server

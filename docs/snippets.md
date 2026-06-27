@@ -1,53 +1,44 @@
 # 📋 Snippets
-Snippets, sometimes also called "canned messages" or "tags", are commonly used messages you can send in Modmail threads with just 1 command.
+Snippets, sometimes called "canned messages" or "tags", are commonly used messages you can send in a Modmail thread with one command.
 
-![Snippets example](snippets.gif)
+Everything is a subcommand of `/snippet`. When a command takes a snippet `name`, start typing and it autocompletes from your existing snippets. Requires `allowSnippets`.
 
-## View available snippets
-### `!snippets` / `!s <shortcut>`
-
-To view all available snippets, use the command `!snippets`.
-
-To view a specific snippet's text, use the command `!s <shortcut>`.
-For example, to view the text of a snippet called "hi", run `!s hi`.
-
-## Creating snippets
-### `!s <shortcut> <text>`
+## Sending a snippet
+### `/snippet send name:<shortcut> [args] [anon]`
+Inside a Modmail thread, send a snippet to the user (this replaces the old `!!shortcut` syntax).
+* `args:` fills the snippet's `{1}`, `{2}`, ... placeholders, in order, separated by spaces.
+* `anon:true` sends it anonymously (only your role is shown).
 
 #### Example
-To create a snippet called "hi" with the text "Hello, how can we help you?", use the following command:
+To send a snippet called `hi`: `/snippet send name:hi`
 
-`!s hi Hello, how can we help you?` 
+## Viewing snippets
+### `/snippet list`
+List all snippet names.
 
-## Using snippets
-### `!!shortcut` / `!!!shortcut`
-Inside a Modmail thread, use `!!shortcut` to send a snippet to the user, replacing `shortcut` with the snippet's name.
+### `/snippet show name:<shortcut>`
+Show a specific snippet's text.
 
-To send a snippet anonymously, use `!!!shortcut`.
-
-*The prefixes `!!` and `!!!` can be changed with the bot options `snippetPrefix` and `snippetPrefixAnon` respectively.*
-
-#### Example
-To send a snippet called "hi", use the following command:
-
-`!!hi`
-
-To send that same snippet anonymously, use the following command:
-
-`!!!hi`
-
-## Editing snippets
-### `!edit_snippet <shortcut> <text>` / `!es <shortcut> <text>`
+## Creating a snippet
+### `/snippet add name:<shortcut> text:<text>`
 
 #### Example
-To edit a snippet called "hi" to say "Hello, how are you?", use the following command:
+To create a snippet called `hi` with the text "Hello, how can we help you?":
 
-`!es hi Hello, how are you?`
+`/snippet add name:hi text:Hello, how can we help you?`
 
-## Deleting snippets
-### `!delete_snippet <shortcut>` / `!ds <shortcut>`
+## Editing a snippet
+### `/snippet edit name:<shortcut> text:<text>`
 
 #### Example
-To delete a snippet called "hi", use the following command:
+To change the `hi` snippet to "Hello, how are you?":
 
-`!ds hi`
+`/snippet edit name:hi text:Hello, how are you?`
+
+## Deleting a snippet
+### `/snippet delete name:<shortcut>`
+
+#### Example
+To delete the `hi` snippet:
+
+`/snippet delete name:hi`
