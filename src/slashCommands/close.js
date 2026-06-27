@@ -61,7 +61,12 @@ module.exports = (slash, { config }) => {
   // message, closes the thread, and posts the closing notification.
   async function performClose(thread, { silent, closedByName, closedById, note }) {
     if (note) {
-      await thread.addSystemMessageToLogs(`**Closing note from ${closedByName}:**\n${note}`);
+      // Set the closing note apart from the surrounding [BOT] log lines with a banner and blank
+      // lines so it is easy to spot as the closer's context for the thread.
+      const divider = "========================================";
+      await thread.addSystemMessageToLogs(
+        `\n${divider}\nCLOSING NOTE from ${closedByName}\n${divider}\n\n${note}\n\n${divider}\n`
+      );
     }
 
     if (config.closeMessage && ! silent) {
@@ -111,7 +116,7 @@ module.exports = (slash, { config }) => {
 
       // Immediate close: open the note-capture modal. The actual close happens on modal submit.
       return ctx.openModal({
-        title: "Close thread (chatter not logged)",
+        title: "Close thread",
         custom_id: `close:${thread.channel_id}:${silentClose ? 1 : 0}`,
         components: [{
           type: 1, // action row
