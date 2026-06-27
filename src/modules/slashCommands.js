@@ -429,9 +429,13 @@ module.exports = ({ bot, config }) => {
       const target = (await threads.findById(threadId)) || (await threads.findByThreadNumber(threadId));
       if (! target) return ctx.respond("No thread found with that number or ID.");
 
+      // interaction.channel can be a partial { id } when uncached, so resolve a real channel
+      // before posting custom responses or files into it.
+      const channel = await utils.getOrFetchChannel(bot, ctx.channel.id);
+
       const customResponse = await getLogCustomResponse(target);
       if (customResponse && (customResponse.content || customResponse.file)) {
-        await ctx.channel.createMessage(customResponse.content, customResponse.file).catch(utils.noop);
+        await channel.createMessage(customResponse.content, customResponse.file).catch(utils.noop);
       }
 
       const logUrl = await getLogUrl(target);
@@ -441,7 +445,7 @@ module.exports = ({ bot, config }) => {
 
       const logFile = await getLogFile(target);
       if (logFile) {
-        await ctx.channel.createMessage(`Log for thread #${target.thread_number}:`, logFile).catch(utils.noop);
+        await channel.createMessage(`Log for thread #${target.thread_number}:`, logFile).catch(utils.noop);
         return ctx.respond("Log file posted in the channel.");
       }
 
@@ -528,12 +532,16 @@ module.exports = ({ bot, config }) => {
         { type: OPT.SUB_COMMAND, name: "reset", description: "Reset your display role" },
       ],
       handler: async (ctx, args, thread) => {
-        const inThread = !! thread;
+        // /role acts on the per-thread display role inside any thread channel (including suspended
+        // ones) and on the moderator's default role elsewhere. Inbox scope only passes open
+        // threads, so re-resolve here to also catch suspended threads, matching roles.js.
+        const threadForRole = thread || await threads.findByChannelId(ctx.channel.id);
+        const inThread = !! threadForRole;
         const scopeLabel = inThread ? "in this thread" : "by default";
 
         if (args._subcommand === "show") {
           const displayRole = inThread
-            ? await getModeratorThreadDisplayRoleName(ctx.member, thread.id)
+            ? await getModeratorThreadDisplayRoleName(ctx.member, threadForRole.id)
             : await getModeratorDefaultDisplayRoleName(ctx.member);
           return ctx.respond(displayRole
             ? `Your display role ${scopeLabel} is currently **${displayRole}**.`
@@ -546,7 +554,7 @@ module.exports = ({ bot, config }) => {
             return ctx.respond("No matching role, or you don't have that role.");
           }
           if (inThread) {
-            await setModeratorThreadRoleOverride(ctx.member.id, thread.id, role.id);
+            await setModeratorThreadRoleOverride(ctx.member.id, threadForRole.id, role.id);
             return ctx.respond(`Your display role for this thread is now **${role.name}**.`);
           }
           await setModeratorDefaultRoleOverride(ctx.member.id, role.id);
@@ -555,8 +563,8 @@ module.exports = ({ bot, config }) => {
 
         // reset
         if (inThread) {
-          await resetModeratorThreadRoleOverride(ctx.member.id, thread.id);
-          const displayRole = await getModeratorThreadDisplayRoleName(ctx.member, thread.id);
+          await resetModeratorThreadRoleOverride(ctx.member.id, threadForRole.id);
+          const displayRole = await getModeratorThreadDisplayRoleName(ctx.member, threadForRole.id);
           return ctx.respond(displayRole
             ? `Reset. Your replies here will now show the default role **${displayRole}**.`
             : "Reset. Your replies here will no longer display a role.");

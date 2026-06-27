@@ -67,13 +67,13 @@ function createSlashCommandManager(bot) {
    * @returns {Array<object>}
    */
   function buildPayload() {
+    // Registered as guild commands on the inbox server, so they're never available in DMs and
+    // need no dm_permission. Staff-only access is enforced at dispatch time via utils.isStaff.
     return [...defs.values()].map(def => ({
       type: ApplicationCommandTypes.CHAT_INPUT,
       name: def.name,
       description: def.description || def.name,
       options: def.options || [],
-      // These are staff tools and never make sense in DMs.
-      dmPermission: false,
     }));
   }
 
