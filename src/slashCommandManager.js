@@ -168,6 +168,18 @@ function createSlashCommandManager(bot) {
         payload.flags = (payload.flags || 0) | EPHEMERAL;
         return interaction.createFollowup(payload).catch(utils.noop);
       },
+
+      /**
+       * Send possibly-long output as an ephemeral reply plus follow-ups, splitting on lines.
+       */
+      async respondChunks(text) {
+        const chunks = utils.chunkMessageLines(text);
+        if (! chunks.length) return this.respond("(nothing to show)");
+        await this.respond({ content: chunks[0], allowedMentions: {} });
+        for (let i = 1; i < chunks.length; i++) {
+          await this.followup({ content: chunks[i], allowedMentions: {} });
+        }
+      },
     };
   }
 
