@@ -43,12 +43,12 @@ function errorHandler(err) {
     } else if (err.message === "Disallowed intents specified") {
       let fullMessage = "Error: Disallowed intents specified";
       fullMessage += "\n\n";
-      fullMessage += "To run the bot, you must enable 'Server Members Intent' on your bot's page in the Discord Developer Portal:";
+      fullMessage += "The bot requested a privileged intent that isn't enabled for it. This build does not require";
+      fullMessage += " any privileged intents by default, so this usually means a privileged intent was added through";
+      fullMessage += " the 'extraIntents' config option.";
       fullMessage += "\n\n";
-      fullMessage += "1. Go to https://discord.com/developers/applications"
-      fullMessage += "2. Click on your bot"
-      fullMessage += "3. Click 'Bot' on the sidebar"
-      fullMessage += "4. Turn on 'Server Members Intent'"
+      fullMessage += "Either remove it from 'extraIntents', or enable it on your bot's page in the Discord Developer";
+      fullMessage += " Portal (https://discord.com/developers/applications -> your bot -> Bot -> Privileged Gateway Intents).";
 
       console.error(fullMessage);
     } else if (err instanceof PluginInstallationError) {
