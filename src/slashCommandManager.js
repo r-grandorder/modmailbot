@@ -62,6 +62,12 @@ function createSlashCommandManager(bot) {
   const addInboxCommand = (def) => addCommand({ ...def, scope: "inbox" });
   const addGlobalCommand = (def) => addCommand({ ...def, scope: "global" });
 
+  // Modal submit handlers, matched by custom_id prefix: "close" matches custom_id "close" and
+  // any "close:...". Handlers receive (ctx, fields, customId) where fields maps text-input
+  // custom_id -> submitted value.
+  const modalHandlers = [];
+  const addModalHandler = (prefix, handler) => modalHandlers.push({ prefix, handler });
+
   /**
    * Build the payload for bulkEditGuildCommands.
    * @returns {Array<object>}
@@ -180,6 +186,17 @@ function createSlashCommandManager(bot) {
           await this.followup({ content: chunks[i], allowedMentions: {} });
         }
       },
+
+      /**
+       * Respond by opening a modal. Only valid as the first response to a command interaction, so
+       * the command must be registered with deferReply: false. The matching modal submit is routed
+       * by custom_id (see addModalHandler).
+       */
+      openModal(modal) {
+        this._responded = true;
+        if (typeof interaction.createModal !== "function") return Promise.resolve();
+        return interaction.createModal(modal).catch(utils.noop);
+      },
     };
   }
 
@@ -216,11 +233,15 @@ function createSlashCommandManager(bot) {
 
     const args = readOptions(interaction);
 
-    // Defer ephemerally so slower handlers never trip Discord's 3 second response window.
-    try {
-      await interaction.acknowledge(EPHEMERAL);
-    } catch (err) {
-      // Already acknowledged or the interaction expired; nothing to do.
+    // Defer ephemerally so slower handlers never trip Discord's 3 second response window. Commands
+    // that open a modal must NOT defer (a modal has to be the first response), so they opt out with
+    // deferReply: false and are responsible for responding within the window themselves.
+    if (def.deferReply !== false) {
+      try {
+        await interaction.acknowledge(EPHEMERAL);
+      } catch (err) {
+        // Already acknowledged or the interaction expired; nothing to do.
+      }
     }
 
     try {
@@ -262,12 +283,58 @@ function createSlashCommandManager(bot) {
     return interaction.result(choices.slice(0, 25)).catch(utils.noop);
   }
 
+  // Flatten a modal's submitted action rows into { textInputCustomId: value }.
+  function readModalFields(interaction) {
+    const fields = {};
+    for (const row of (interaction.data.components || [])) {
+      for (const component of (row.components || [])) {
+        if (component.custom_id != null) fields[component.custom_id] = component.value;
+      }
+    }
+    return fields;
+  }
+
+  async function dispatchModal(interaction) {
+    const customId = interaction.data.custom_id || "";
+    const entry = modalHandlers.find(h => customId === h.prefix || customId.startsWith(`${h.prefix}:`));
+    if (! entry) return;
+
+    const ctx = makeContext(interaction);
+
+    if (! isOnInboxServer(interaction)) {
+      return ctx.respond("This can only be used on the modmail inbox server.");
+    }
+    if (! utils.isStaff(interaction.member)) {
+      return ctx.respond("You don't have permission to do this.");
+    }
+
+    // Modal submits can be deferred (unlike opening a modal), so defer ephemerally for the work.
+    try {
+      await interaction.defer(EPHEMERAL);
+    } catch (err) {
+      // Already acknowledged or expired.
+    }
+
+    try {
+      await entry.handler(ctx, readModalFields(interaction), customId);
+    } catch (err) {
+      console.error(`[slash-modal:${customId}]`, err);
+      return ctx.respond(`⚠ ${err.message || "Something went wrong."}`);
+    }
+
+    if (! ctx._responded) {
+      await ctx.respond("Done.");
+    }
+  }
+
   bot.on("interactionCreate", (interaction) => {
     let promise;
     if (interaction.type === InteractionTypes.APPLICATION_COMMAND) {
       promise = dispatchCommand(interaction);
     } else if (interaction.type === InteractionTypes.APPLICATION_COMMAND_AUTOCOMPLETE) {
       promise = dispatchAutocomplete(interaction);
+    } else if (interaction.type === InteractionTypes.MODAL_SUBMIT) {
+      promise = dispatchModal(interaction);
     } else {
       return;
     }
@@ -281,6 +348,7 @@ function createSlashCommandManager(bot) {
     addThreadCommand,
     addInboxCommand,
     addGlobalCommand,
+    addModalHandler,
     buildPayload,
     registerCommands,
   };

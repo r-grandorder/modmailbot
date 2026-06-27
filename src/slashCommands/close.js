@@ -1,11 +1,17 @@
 const moment = require("moment");
 const utils = require("../utils");
+const threads = require("../data/threads");
 const { getLogUrl, getLogFile, getLogCustomResponse } = require("../data/logs");
 const { THREAD_MESSAGE_TYPE } = require("../data/constants");
 const { ApplicationCommandOptionTypes: OPT } = require("eris").Constants;
 
 // Slash equivalent of src/modules/close.js (staff close path only; user-side !close stays on the
 // text command in DMs). Scheduled closes are still finalised by close.js's own loop.
+//
+// Immediate /close opens a modal so the closer can record a note before the thread is gone. This is
+// the mitigation for dropping staff side-chat logging: chatter in the thread channel is no longer
+// captured (no message content intent), so the modal warns about that and lets the closer save
+// anything worth keeping into the exported log.
 module.exports = (slash, { config }) => {
   // Mirrored from close.js so an immediate /close reports the same closing notification.
   async function getMessagesAmounts(thread) {
@@ -51,9 +57,29 @@ module.exports = (slash, { config }) => {
     utils.postLog(body);
   }
 
+  // Shared by the immediate-close modal submit. Saves the optional note to the log, sends the close
+  // message, closes the thread, and posts the closing notification.
+  async function performClose(thread, { silent, closedByName, closedById, note }) {
+    if (note) {
+      await thread.addSystemMessageToLogs(`**Closing note from ${closedByName}:**\n${note}`);
+    }
+
+    if (config.closeMessage && ! silent) {
+      const closeMessage = utils.readMultilineConfigValue(config.closeMessage);
+      await thread.sendSystemMessageToUser(closeMessage).catch(() => {});
+    }
+
+    await thread.close(false, silent);
+    await sendCloseNotification(
+      thread,
+      `Modmail thread #${thread.thread_number} with ${thread.user_name} (${thread.user_id}) was closed by ${closedByName} (${closedById})`
+    );
+  }
+
   slash.addThreadCommand({
     name: "close",
     description: "Close this modmail thread",
+    deferReply: false, // immediate close opens a modal, which has to be the first response
     options: [
       { type: OPT.STRING, name: "time", description: "Close after a delay, e.g. \"1h30m\"", required: false },
       { type: OPT.BOOLEAN, name: "silent", description: "Close without notifying the user", required: false },
@@ -83,18 +109,35 @@ module.exports = (slash, { config }) => {
         );
       }
 
-      if (config.closeMessage && ! silentClose) {
-        const closeMessage = utils.readMultilineConfigValue(config.closeMessage);
-        await thread.sendSystemMessageToUser(closeMessage).catch(() => {});
-      }
-
-      const closedBy = config.useDisplaynames ? (ctx.author.globalName || ctx.author.username) : ctx.author.username;
-      await thread.close(false, silentClose);
-      await sendCloseNotification(
-        thread,
-        `Modmail thread #${thread.thread_number} with ${thread.user_name} (${thread.user_id}) was closed by ${closedBy} (${ctx.author.id})`
-      );
-      return ctx.respond("Thread closed.");
+      // Immediate close: open the note-capture modal. The actual close happens on modal submit.
+      return ctx.openModal({
+        title: "Close thread (chatter not logged)",
+        custom_id: `close:${thread.channel_id}:${silentClose ? 1 : 0}`,
+        components: [{
+          type: 1, // action row
+          components: [{
+            type: 4, // text input
+            custom_id: "note",
+            style: 2, // paragraph
+            label: "Notes to save (optional)",
+            placeholder: "Only the user's messages and your /replies are saved. Add anything else worth keeping.",
+            required: false,
+            max_length: 4000,
+          }],
+        }],
+      });
     },
+  });
+
+  slash.addModalHandler("close", async (ctx, fields, customId) => {
+    const [, channelId, silentFlag] = customId.split(":");
+    const thread = await threads.findOpenThreadByChannelId(channelId);
+    if (! thread) return ctx.respond("This thread is no longer open.");
+
+    const note = (fields.note || "").trim();
+    const closedByName = config.useDisplaynames ? (ctx.author.globalName || ctx.author.username) : ctx.author.username;
+    await performClose(thread, { silent: silentFlag === "1", closedByName, closedById: ctx.author.id, note });
+
+    return ctx.respond(note ? "Thread closed. Your note was saved to the log." : "Thread closed.");
   });
 };
