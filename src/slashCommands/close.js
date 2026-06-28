@@ -93,6 +93,9 @@ module.exports = (slash, { config }) => {
       if (args.cancel) {
         if (thread.scheduled_close_at) {
           await thread.cancelScheduledClose();
+          const cancelledBy = config.useDisplaynames ? (ctx.author.globalName || ctx.author.username) : ctx.author.username;
+          // Public so other staff who saw the scheduled-close notice know it is no longer closing.
+          await thread.postSystemMessage(`Scheduled close cancelled by ${cancelledBy}.`);
           return ctx.respond("Cancelled scheduled closing.");
         }
         return ctx.respond("This thread isn't scheduled to close.");
