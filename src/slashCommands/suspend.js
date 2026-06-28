@@ -20,6 +20,9 @@ module.exports = (slash, { config }) => {
       if (args.cancel) {
         if (thread.scheduled_suspend_at) {
           await thread.cancelScheduledSuspend();
+          const cancelledBy = config.useDisplaynames ? (ctx.author.globalName || ctx.author.username) : ctx.author.username;
+          // Public so other staff who saw the scheduled-suspend notice know it is no longer pending.
+          await thread.postSystemMessage(`Scheduled suspension cancelled by ${cancelledBy}.`);
           return ctx.respond("Cancelled scheduled suspension.");
         }
         return ctx.respond("This thread isn't scheduled to be suspended.");
@@ -32,7 +35,10 @@ module.exports = (slash, { config }) => {
         if (! delay) return ctx.respond("Invalid delay. Format example: \"2h\".");
         const suspendAt = moment.utc().add(delay, "ms");
         await thread.scheduleSuspend(suspendAt.format("YYYY-MM-DD HH:mm:ss"), ctx.author);
-        return ctx.respond(`Thread will be suspended in ${utils.humanizeDelay(delay)}. Use \`/suspend cancel:true\` to cancel.`);
+        const scheduledBy = config.useDisplaynames ? (ctx.author.globalName || ctx.author.username) : ctx.author.username;
+        // Public notice so other staff see the pending suspension; intentionally not ephemeral.
+        await thread.postSystemMessage(`Thread will be suspended in ${utils.humanizeDelay(delay)}, scheduled by ${scheduledBy}. Use \`/suspend cancel:true\` to cancel.`);
+        return ctx.respond("Scheduled.");
       }
 
       await thread.suspend();
