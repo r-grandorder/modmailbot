@@ -8,10 +8,10 @@ const { ApplicationCommandOptionTypes: OPT } = require("eris").Constants;
 // Slash equivalent of src/modules/close.js (staff close path only; user-side !close stays on the
 // text command in DMs). Scheduled closes are still finalised by close.js's own loop.
 //
-// Immediate /close opens a modal so the closer can record a note before the thread is gone. This is
-// the mitigation for dropping staff side-chat logging: chatter in the thread channel is no longer
-// captured (no message content intent), so the modal warns about that and lets the closer save
-// anything worth keeping into the exported log.
+// Both an immediate and a timed /close open a note-capture modal first. The note is posted into the
+// ticket channel and saved to the log; for a timed close it stays visible while the timer runs.
+// This is the mitigation for dropping staff side-chat logging: channel chatter is no longer
+// captured (no message content intent), so this is where the closer records context worth keeping.
 module.exports = (slash, { config }) => {
   // Mirrored from close.js so an immediate /close reports the same closing notification.
   async function getMessagesAmounts(thread) {
@@ -57,18 +57,15 @@ module.exports = (slash, { config }) => {
     utils.postLog(body);
   }
 
-  // Shared by the immediate-close modal submit. Saves the optional note to the log, sends the close
-  // message, closes the thread, and posts the closing notification.
-  async function performClose(thread, { silent, closedByName, closedById, note }) {
-    if (note) {
-      // Set the closing note apart from the surrounding [BOT] log lines with a banner and blank
-      // lines so it is easy to spot as the closer's context for the thread.
-      const divider = "========================================";
-      await thread.addSystemMessageToLogs(
-        `\n${divider}\nCLOSING NOTE from ${closedByName}\n${divider}\n\n${note}\n\n${divider}\n`
-      );
-    }
+  // Banner so the closing note stands apart from surrounding lines, both in the channel and in
+  // the exported log.
+  function formatNote(closedByName, note) {
+    const divider = "========================================";
+    return `\n${divider}\nCLOSING NOTE from ${closedByName}\n${divider}\n\n${note}\n\n${divider}\n`;
+  }
 
+  // Immediate close: send the close message, close the thread, post the closing notification.
+  async function performClose(thread, { silent, closedByName, closedById }) {
     if (config.closeMessage && ! silent) {
       const closeMessage = utils.readMultilineConfigValue(config.closeMessage);
       await thread.sendSystemMessageToUser(closeMessage).catch(() => {});
@@ -84,7 +81,7 @@ module.exports = (slash, { config }) => {
   slash.addThreadCommand({
     name: "close",
     description: "Close this modmail thread",
-    deferReply: false, // immediate close opens a modal, which has to be the first response
+    deferReply: false, // close opens a modal, which has to be the first response
     options: [
       { type: OPT.STRING, name: "time", description: "Close after a delay, e.g. \"1h30m\"", required: false },
       { type: OPT.BOOLEAN, name: "silent", description: "Close without notifying the user", required: false },
@@ -101,23 +98,19 @@ module.exports = (slash, { config }) => {
         return ctx.respond("This thread isn't scheduled to close.");
       }
 
+      let delayMs = 0;
       if (args.time) {
-        const delay = utils.convertDelayStringToMS(args.time);
-        if (delay === 0 || delay === null) {
+        delayMs = utils.convertDelayStringToMS(args.time);
+        if (delayMs === 0 || delayMs === null) {
           return ctx.respond("Invalid delay. Format example: \"1h30m\".");
         }
-
-        const closeAt = moment.utc().add(delay, "ms");
-        await thread.scheduleClose(closeAt.format("YYYY-MM-DD HH:mm:ss"), ctx.author, silentClose ? 1 : 0);
-        return ctx.respond(
-          `Thread will close ${silentClose ? "silently " : ""}in ${utils.humanizeDelay(delay)}. Use \`/close cancel:true\` to cancel.`
-        );
       }
 
-      // Immediate close: open the note-capture modal. The actual close happens on modal submit.
+      // Open the note modal for both immediate and timed closes. The actual close (now or
+      // scheduled) happens on submit; the delay (0 for immediate) rides along in the custom_id.
       return ctx.openModal({
         title: "Close thread",
-        custom_id: `close:${thread.channel_id}:${silentClose ? 1 : 0}`,
+        custom_id: `close:${thread.channel_id}:${silentClose ? 1 : 0}:${delayMs}`,
         components: [{
           type: 1, // action row
           components: [{
@@ -135,14 +128,32 @@ module.exports = (slash, { config }) => {
   });
 
   slash.addModalHandler("close", async (ctx, fields, customId) => {
-    const [, channelId, silentFlag] = customId.split(":");
+    const [, channelId, silentFlag, delayStr] = customId.split(":");
     const thread = await threads.findOpenThreadByChannelId(channelId);
     if (! thread) return ctx.respond("This thread is no longer open.");
 
+    const silent = silentFlag === "1";
+    const delayMs = parseInt(delayStr, 10) || 0;
     const note = (fields.note || "").trim();
     const closedByName = config.useDisplaynames ? (ctx.author.globalName || ctx.author.username) : ctx.author.username;
-    await performClose(thread, { silent: silentFlag === "1", closedByName, closedById: ctx.author.id, note });
 
+    if (delayMs > 0) {
+      const closeAt = moment.utc().add(delayMs, "ms");
+      await thread.scheduleClose(closeAt.format("YYYY-MM-DD HH:mm:ss"), ctx.author, silent ? 1 : 0);
+      const humanized = utils.humanizeDelay(delayMs);
+      // One public notice in the channel, with the note inline if there is one, so other staff
+      // see the pending close. This is the "will close in X" message, intentionally not ephemeral.
+      let notice = `Thread will close ${silent ? "silently " : ""}in ${humanized}, scheduled by ${closedByName}. Use \`/close cancel:true\` to cancel.`;
+      if (note) notice += `\n${formatNote(closedByName, note)}`;
+      await thread.postSystemMessage(notice);
+      return ctx.respond(note ? "Scheduled. Note saved." : "Scheduled.");
+    }
+
+    // Immediate close: post the note (if any) to the channel + log, then close now.
+    if (note) {
+      await thread.postSystemMessage(formatNote(closedByName, note));
+    }
+    await performClose(thread, { silent, closedByName, closedById: ctx.author.id });
     return ctx.respond(note ? "Thread closed. Your note was saved to the log." : "Thread closed.");
   });
 };
