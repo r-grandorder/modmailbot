@@ -23,7 +23,7 @@ module.exports = (slash, { bot }) => {
         source: "command",
       });
       await createdThread.postSystemMessage(`Thread was opened by ${ctx.author.globalName || ctx.author.username}`);
-      return ctx.respond(`Thread opened: <#${createdThread.channel_id}>`);
+      return ctx.respond(`Thread opened: <#${createdThread.channel_id}>`, { persist: true });
     },
   });
 };

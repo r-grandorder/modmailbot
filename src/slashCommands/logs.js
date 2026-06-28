@@ -58,7 +58,7 @@ module.exports = (slash, { bot }) => {
       }));
 
       if (threadLines.length === 0) {
-        return ctx.respond({ content: `There are no log files for <@${userId}>.`, allowedMentions: {} });
+        return ctx.respond({ content: `There are no log files for <@${userId}>.`, allowedMentions: {} }, { persist: true });
       }
 
       let message = isPaginated
@@ -67,7 +67,7 @@ module.exports = (slash, { bot }) => {
       message += `\n${threadLines.join("\n")}`;
       if (isPaginated) message += "\nAdd `page:` to see more.";
 
-      return ctx.respond({ content: message, allowedMentions: {} });
+      return ctx.respond({ content: message, allowedMentions: {} }, { persist: true });
     },
   });
 
@@ -96,7 +96,7 @@ module.exports = (slash, { bot }) => {
 
       const logUrl = await getLogUrl(target);
       if (logUrl) {
-        return ctx.respond(`Log for thread #${target.thread_number}:\n<${addOptQueryStringToUrl(logUrl, args)}>`);
+        return ctx.respond(`Log for thread #${target.thread_number}:\n<${addOptQueryStringToUrl(logUrl, args)}>`, { persist: true });
       }
 
       const logFile = await getLogFile(target);

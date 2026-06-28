@@ -11,6 +11,11 @@ const {
 
 const EPHEMERAL = 64;
 
+// Transient ephemeral confirmations (e.g. "Reply sent") self-delete after this long so they don't
+// pile up in the invoker's view. Output meant to be read (logs, IDs, lists) opts out with
+// { persist: true }. Best effort: if Discord rejects the delete, the message simply stays.
+const EPHEMERAL_TTL = 10000;
+
 /**
  * A small slash command layer for modmail.
  *
@@ -155,15 +160,22 @@ function createSlashCommandManager(bot) {
 
       /**
        * Send (or, once acknowledged, edit in) an ephemeral reply visible only to the invoker.
+       * Auto-deletes after EPHEMERAL_TTL unless opts.persist is set (for output meant to be read).
        */
-      respond(content) {
+      respond(content, opts = {}) {
         this._responded = true;
         const payload = typeof content === "string" ? { content } : { ...content };
+        let result;
         if (interaction.acknowledged) {
-          return interaction.editOriginalMessage(payload).catch(utils.noop);
+          result = interaction.editOriginalMessage(payload).catch(utils.noop);
+        } else {
+          payload.flags = (payload.flags || 0) | EPHEMERAL;
+          result = interaction.createMessage(payload).catch(utils.noop);
         }
-        payload.flags = (payload.flags || 0) | EPHEMERAL;
-        return interaction.createMessage(payload).catch(utils.noop);
+        if (! opts.persist && typeof interaction.deleteOriginalMessage === "function") {
+          setTimeout(() => interaction.deleteOriginalMessage().catch(utils.noop), EPHEMERAL_TTL);
+        }
+        return result;
       },
 
       /**
@@ -181,7 +193,8 @@ function createSlashCommandManager(bot) {
       async respondChunks(text) {
         const chunks = utils.chunkMessageLines(text);
         if (! chunks.length) return this.respond("(nothing to show)");
-        await this.respond({ content: chunks[0], allowedMentions: {} });
+        // Lists are meant to be read, so keep them (follow-ups aren't auto-deleted regardless).
+        await this.respond({ content: chunks[0], allowedMentions: {} }, { persist: true });
         for (let i = 1; i < chunks.length; i++) {
           await this.followup({ content: chunks[i], allowedMentions: {} });
         }

@@ -110,9 +110,9 @@ module.exports = (slash, { bot, config }) => {
       if (! userId) return ctx.respond("Specify a user, or run this inside a thread.");
 
       const blockStatus = await blocked.getBlockStatus(userId);
-      if (! blockStatus.isBlocked) return ctx.respond(`<@${userId}> (\`${userId}\`) is **not** blocked.`);
-      if (blockStatus.expiresAt) return ctx.respond(`<@${userId}> (\`${userId}\`) is blocked until ${blockStatus.expiresAt} (UTC).`);
-      return ctx.respond(`<@${userId}> (\`${userId}\`) is blocked indefinitely.`);
+      if (! blockStatus.isBlocked) return ctx.respond(`<@${userId}> (\`${userId}\`) is **not** blocked.`, { persist: true });
+      if (blockStatus.expiresAt) return ctx.respond(`<@${userId}> (\`${userId}\`) is blocked until ${blockStatus.expiresAt} (UTC).`, { persist: true });
+      return ctx.respond(`<@${userId}> (\`${userId}\`) is blocked indefinitely.`, { persist: true });
     },
   });
 
@@ -127,7 +127,7 @@ module.exports = (slash, { bot, config }) => {
       for (const user of blockedUsers) {
         reply += `**<@${user.userId}> (\`${user.userId}\`)** blocked by <@${user.blockedBy}>${user.expiresAt ? ` until ${user.expiresAt} (UTC)` : " permanently"}\n`;
       }
-      return ctx.respond({ content: reply, allowedMentions: {} });
+      return ctx.respond({ content: reply, allowedMentions: {} }, { persist: true });
     },
   });
 };

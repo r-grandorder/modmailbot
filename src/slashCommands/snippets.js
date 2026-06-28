@@ -73,7 +73,7 @@ module.exports = (slash, { config }) => {
       if (args._subcommand === "show") {
         const snippet = await snippetsData.get(args.name);
         if (! snippet) return ctx.respond(`No snippet named "${args.name}".`);
-        return ctx.respond(`\`${args.name}\` replies with:\n${utils.START_CODEBLOCK}${utils.disableCodeBlocks(snippet.body)}${utils.END_CODEBLOCK}`);
+        return ctx.respond(`\`${args.name}\` replies with:\n${utils.START_CODEBLOCK}${utils.disableCodeBlocks(snippet.body)}${utils.END_CODEBLOCK}`, { persist: true });
       }
       if (args._subcommand === "add") {
         if (await snippetsData.get(args.name)) return ctx.respond(`Snippet "${args.name}" already exists. Use \`/snippet edit\`.`);

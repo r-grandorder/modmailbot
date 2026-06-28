@@ -9,7 +9,7 @@ module.exports = (slash) => {
     allowSuspended: true,
     handler: async (ctx, args, thread) => {
       await thread.postSystemMessage(thread.user_id);
-      return ctx.respond(`User ID: \`${thread.user_id}\``);
+      return ctx.respond(`User ID: \`${thread.user_id}\``, { persist: true });
     },
   });
 
@@ -33,7 +33,7 @@ module.exports = (slash) => {
         `Channel ID: \`${channelId}\``,
         `Message ID: \`${threadMessage.dm_message_id}\``,
         `Link: <${messageLink}>`,
-      ].join("\n"));
+      ].join("\n"), { persist: true });
     },
   });
 };
