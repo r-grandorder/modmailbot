@@ -1,0 +1,19 @@
+# Built in-container; never copy a host node_modules over it (musl vs glibc native modules).
+node_modules
+
+.git
+.github
+.vscode
+.idea
+
+# Secrets / runtime state: mount these at runtime instead of baking them in.
+config.ini
+config.json
+config.json5
+config.js
+*.config.ini
+db/*.sqlite
+db/*.sqlite-journal
+attachments/
+logs/
+*.log
