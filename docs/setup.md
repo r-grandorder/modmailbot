@@ -2,6 +2,8 @@
 **Note:** This bot is run on your own machine or a server.  
 To keep it online, you need to keep the bot process running.
 
+> Prefer Docker? A prebuilt image is published to GHCR. See [🐳 Running with Docker](docker.md).
+
 ## Terminology
 * **Main server** (or main guild) is the server where users will be contacting modmail from
 * **Inbox server** (or inbox guild, or mail guild) is the server where modmail threads will be created.
