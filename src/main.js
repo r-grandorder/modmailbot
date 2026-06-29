@@ -152,7 +152,10 @@ function initBaseMessageHandlers() {
       const replied = await thread.replyToUser(msg.member, msg.content.trim(), msg.attachments, config.alwaysReplyAnon || false, msg.messageReference);
       if (replied) msg.delete();
     } else {
-      // Otherwise just save the messages as "chat" in the logs
+      // Without the message content intent, staff chatter in thread channels arrives with empty
+      // content, so don't persist empty chat messages. (Side-chat logging was intentionally dropped
+      // as part of the slash command migration; anything that must be on record goes through /note.)
+      if (! msg.content && (! msg.attachments || msg.attachments.length === 0)) return;
       thread.saveChatMessageToLogs(msg);
     }
   });
@@ -298,8 +301,12 @@ function initBaseMessageHandlers() {
       // For same server setups, check if the person who pinged modmail is staff. If so, ignore the ping.
       if (utils.isStaff(msg.member)) return;
     } else {
-      // For separate server setups, check if the member is staff on the modmail server
-      const inboxMember = utils.getInboxGuild().members.get(msg.author.id);
+      // For separate server setups, check if the member is staff on the modmail server.
+      // The member may not be cached without the guild members intent, so fall back to a REST fetch.
+      let inboxMember = utils.getInboxGuild().members.get(msg.author.id);
+      if (! inboxMember) {
+        inboxMember = await bot.getRESTGuildMember(utils.getInboxGuild().id, msg.author.id).catch(() => null);
+      }
       if (inboxMember && utils.isStaff(inboxMember)) return;
     }
 
@@ -379,6 +386,7 @@ function getBasePlugins() {
     "file:./src/modules/roles",
     "file:./src/modules/notes",
     "file:./src/modules/dmReactions",
+    "file:./src/modules/slashCommands",
   ];
 }
 

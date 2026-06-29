@@ -2,18 +2,22 @@ const Eris = require("eris");
 const config = require("./cfg");
 
 const intents = [
-  // PRIVILEGED INTENTS
-  "guildMembers", // For server greetings
+  // No privileged intents are requested.
+  // - "messageContent" is intentionally omitted. Staff act through slash commands, whose
+  //   interaction payloads carry their own data, and the message content the bot still relies on
+  //   (DMs to the bot, messages that @mention the bot, the bot's own messages) is delivered
+  //   without the intent under Discord's exemptions.
+  // - "guildMembers" is intentionally omitted. Greetings and join/leave thread notifications
+  //   depend on it and stay dormant until it is re-enabled both here and in the developer portal.
 
   // REGULAR INTENTS
-  "directMessages", // For core functionality
-  "guildMessages", // For bot commands and mentions
-  "messageContent", // For everything
+  "directMessages", // For core functionality (user DMs)
+  "guildMessages", // For @mentions and thread channel events
   "guilds", // For core functionality
   "guildVoiceStates", // For member information in the thread header
   "guildMessageTyping", // For typing indicators
   "directMessageTyping", // For typing indicators
-  "guildBans", // For join/leave notification Ban message
+  "guildBans", // For ban/unban notifications in open threads
   "directMessageReactions", // For DM reaction notifications
 
   // EXTRA INTENTS (from the config)

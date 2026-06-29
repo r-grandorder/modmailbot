@@ -103,11 +103,11 @@ If enabled, messages edited and deleted by the user will be updated accordingly 
 
 #### allowBlock
 **Default:** `on`  
-If enabled, staff members can block a user from using modmail with `!block`
+If enabled, staff members can block a user from using modmail with `/block`
 
 #### allowSuspend
 **Default:** `on`  
-If enabled, staff members can suspend a user from using modmail with `!suspend`
+If enabled, staff members can suspend a user from using modmail with `/suspend`
 
 #### allowSnippets
 **Default:** `on`  
@@ -116,30 +116,29 @@ If enabled, staff members can use [Snippets](snippets.md)
 #### allowInlineSnippets
 **Default:** `on`  
 If `allowSnippets` is enabled, this option controls whether the snippets can be included *within* replies by wrapping the snippet's name in {{ and }}.  
-E.g. `!r Hello! {{rules}}`
+E.g. `/reply message:Hello! {{rules}}`
 
 See [inlineSnippetStart](#inlineSnippetStart) and [inlineSnippetEnd](#inlineSnippetEnd) to customize the symbols used.
 
 #### allowChangingDisplayRole
 **Default:** `on`  
-If enabled, moderators can change the role that's shown with their replies to any role they currently have using the `!role` command.
+If enabled, moderators can change the role that's shown with their replies to any role they currently have using the `/role` command.
 
 #### allowNotes
 **Default:** `on`  
-If enabled, moderators can add notes on users using the `!note` command.
+If enabled, moderators can add notes on users using the `/note` command.
 
 #### alwaysReply
 **Default:** `off`  
-If enabled, all messages in modmail threads will be sent to the user without having to use `!r`.  
-To send internal messages in the thread when this option is enabled, add your command prefix (e.g. `!`) and a space at the beginning of the messages. For example, `! This is an internal message`.
+**No longer functional in this build.** Auto-reply read staff messages in the thread channel, which needs the Message Content Intent that this build no longer requests. Use `/reply` instead.
 
 #### alwaysReplyAnon
 **Default:** `off`  
-If `alwaysReply` is enabled, this option controls whether the auto-reply is anonymous
+**No longer functional in this build** (see `alwaysReply`). Use `/anonreply` instead.
 
 #### forceAnon
 **Default:** `off`  
-If enabled, all replies (including regular `!reply` and snippets) are anonymous
+If enabled, all replies (including regular `/reply` and snippets) are anonymous
 
 #### anonymizeChannelName
 **Default:** `off`  
@@ -198,7 +197,7 @@ If set, the bot sends this message to the user when the modmail thread is closed
 
 #### commandAliases
 **Default:** *None*  
-Custom aliases/shortcuts for commands. Example:
+Custom aliases/shortcuts for the legacy text commands. Staff now use slash commands, which do not support aliases, so this only affects any user-facing DM text commands. Example:
 ```ini
 # !mv is an alias/shortcut for !move
 commandAliases.mv = move
@@ -338,7 +337,7 @@ Make sure to do the necessary [port forwarding](https://portforward.com/) and ad
 
 #### prefix
 **Default:** `!`  
-Prefix for bot commands
+Prefix for the legacy text commands. Staff now use slash commands, so this only affects the user-facing DM commands (such as user self-close, when `allowUserClose` is enabled).
 
 #### reactOnSeen
 **Default:** `off`  
@@ -402,11 +401,11 @@ Size limit of `relaySmallAttachmentsAsAttachments` in bytes (default is 2MB)
 
 #### snippetPrefix
 **Default:** `!!`  
-Prefix for snippets
+No longer used in this build; send snippets with `/snippet send`.
 
 #### snippetPrefixAnon
 **Default:** `!!!`  
-Prefix to use snippets anonymously
+No longer used in this build; use `/snippet send` with `anon:true`.
 
 #### status
 **Default:** `Message me for help`  
