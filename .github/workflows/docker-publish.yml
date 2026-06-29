@@ -6,6 +6,15 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [master]
+    # Only re-validate the image build when something that actually affects it changes, so
+    # unrelated PRs don't trigger a Docker build.
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "package.json"
+      - "package-lock.json"
+      - "patches/**"
+      - ".github/workflows/docker-publish.yml"
   workflow_dispatch:
 
 env:
