@@ -1,3 +1,10 @@
+# Changes in this Fork
+- This fork was designed such that the bot will no longer require the Server Members and Message Content Intents that was recently flagged by Discord for deployments with 10k+ users (originally 100 servers)
+- All commands has been converted to slash commands
+- Idle chatter in a thread will no longer be logged, the /close command now has a field to add any supplementary notes that the mod team may want to put in the logs
+- Greeting messages (sent on member join) doesn't work without the Server Members intent
+- Docker images are available for this fork, details [here](docs/docker.md).
+
 # Modmail for Discord
 Modmail Bot is a bot for [Discord](https://discord.com/) that allows users to DM the bot to contact the server's moderators/staff
 without messaging them individually or pinging them publically on the server.
